@@ -1,6 +1,5 @@
 *.bin
 models/
-data/
 checkpoints/
 nav
 tags
