@@ -62,7 +62,6 @@ class NumpySnapshot:
 
         # Load the snapshot
         expected_arrays = dict(np.load(snapshot_path))
-
         # Verify all expected arrays are present
         missing_keys = set(arrays_dict.keys()) - set(expected_arrays.keys())
         if missing_keys:
@@ -72,9 +71,9 @@ class NumpySnapshot:
         extra_keys = set(expected_arrays.keys()) - set(arrays_dict.keys())
         if extra_keys:
             raise AssertionError(f"Snapshot contains extra keys {extra_keys} for {test_name}")
-
         # Compare all arrays
         for key in arrays_dict:
+            # print("expected_arrays[key]",expected_arrays[key])
             np.testing.assert_allclose(
                 _canonicalize_array(arrays_dict[key]),
                 expected_arrays[key],
@@ -120,6 +119,8 @@ class Snapshot:
             for key in actual:
                 if key not in expected_data:
                     raise AssertionError(f"Key '{key}' not found in snapshot for {test_name}")
+                # print("actual[key]",actual[key])
+                # print("expected_data[key]",expected_data[key])
                 assert actual[key] == expected_data[key], (
                     f"Data for key '{key}' does not match snapshot for {test_name}"
                 )
@@ -183,6 +184,7 @@ def numpy_snapshot(request):
             test_name = request.node.name
         if match_exact:
             rtol = atol = 0
+        # print("actual", actual)
         return original_assert_match(actual, test_name=test_name, force_update=force_update, rtol=rtol, atol=atol)
 
     snapshot.assert_match = patched_assert_match
@@ -210,7 +212,7 @@ def output_strs():
 
 @pytest.fixture
 def model_id():
-    return "/data/a5-alignment/models/Qwen2.5-Math-1.5B"
+    return "/opt/pretrained_models/Qwen/Qwen2.5-Math-1.5B"
 
 
 @pytest.fixture

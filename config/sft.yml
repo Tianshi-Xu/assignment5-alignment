@@ -1,0 +1,11 @@
+model_id: "/opt/pretrained_models/Qwen/Qwen2.5-Math-1.5B"
+
+train_dir: "data/am/am_cs336_less1024.jsonl"
+valid_dir: "data/math_hf/valid.jsonl"
+batch_size: 1
+gradient_accumulation_steps: 8
+num_samples: 2048
+
+log_name: "sft"
+out_path: "checkpoints/sft"
+wandb_name: "cs336_assignment5_sft"

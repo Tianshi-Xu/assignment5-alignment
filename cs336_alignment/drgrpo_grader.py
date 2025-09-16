@@ -1004,7 +1004,7 @@ def grade(model_answer: str, gt_answer: str, fast: bool = True):
         )
     return correct
 
-
+# verify if the response is correct
 def r1_zero_reward_fn(response, ground_truth, fast=True):
     # We are strict about format to evaluate our models.
     if "</think> <answer>" in response and "</answer>" in response:
@@ -1020,7 +1020,9 @@ def r1_zero_reward_fn(response, ground_truth, fast=True):
         if isinstance(ground_truth, float) or isinstance(ground_truth, int):
             ground_truth = str(ground_truth)
         if isinstance(ground_truth, str):
+            # print("model_answer, ground_truth:", model_answer, ground_truth)
             is_correct = grade(model_answer, ground_truth, fast)
+            # print("is_correct:", is_correct)
         elif isinstance(ground_truth, list):
             is_correct = False
             for gt in ground_truth:
