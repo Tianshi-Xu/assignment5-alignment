@@ -1,0 +1,1 @@
+uv run cs336_alignment/EI.py --config config/ei.yml

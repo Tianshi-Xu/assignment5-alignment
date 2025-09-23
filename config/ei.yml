@@ -1,0 +1,10 @@
+model_id: "checkpoints/sft_correct/sft_1024_correct"
+
+train_dir: "data/math_hf/train.jsonl"
+valid_dir: "data/math_hf/valid.jsonl"
+batch_size: 512
+gradient_accumulation_steps: 8
+n_ei_steps: 5
+G: 5
+
+log_name: "ei"

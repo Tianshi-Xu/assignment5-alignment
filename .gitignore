@@ -1,6 +1,7 @@
 *.bin
 models/
 checkpoints/
+data/am
 nav
 tags
 swanlog/

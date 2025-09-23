@@ -14,8 +14,8 @@ import logging,yaml
 from logging.handlers import RotatingFileHandler
 from timm.utils import setup_default_logging
 import swanlab
-from module import *
-from valid_math import load_math_dataset, format_prompt, evaluate_vllm, r1_zero_reward_fn
+from cs336_alignment.module_sft import *
+from eval_math import load_math_dataset, format_prompt, evaluate_vllm, r1_zero_reward_fn
 import time
 
 config_parser = parser = argparse.ArgumentParser(description='Training Config', add_help=False)
@@ -29,7 +29,7 @@ parser.add_argument('--valid_dir', type=str, default="", help="dir for valid dat
 parser.add_argument('--num_samples', type=int, default=128, help="number of samples")
 parser.add_argument('--batch_size', type=int, default=128, help="batch size")
 parser.add_argument('--gradient_accumulation_steps', type=int, default=1, help="gradient accumulation steps")
-parser.add_argument('--seed', type=int, default=42, help="seed")
+parser.add_argument('--seed', type=int, default=3742, help="seed")
 
 parser.add_argument('--log_name', default='none', type=str, help='')
 parser.add_argument('--out_path', default='none', type=str, help='path to save output model')
@@ -90,7 +90,7 @@ def get_loader(dataset: List[Dict], batch_size: int):
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 def get_optimizer_scheduler(model: PreTrainedModel,num_training_steps):
-    optimizer = AdamW(model.parameters(), lr=1e-6, weight_decay=0.01)
+    optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=0.01)
     num_warmup_steps = int(0.05 * num_training_steps)  # 5% warmup
     scheduler = get_cosine_schedule_with_warmup(
         optimizer,
@@ -107,12 +107,14 @@ def evaluate(args,logger,model:LLM) -> float:
     # prompts = [format_prompt(prompt_file,"What is the smallest multiple of 6 greater than 115?")]
     answers = [example['solution'] for example in examples]
     sampling_params = SamplingParams(
-        temperature=1.0, top_p=1.0, max_tokens=1024, stop=["</answer>"], include_stop_str_in_output=True
+        temperature=1.0, top_p=1.0, max_tokens=4096, stop=["</answer>"], include_stop_str_in_output=True
     )
     acc = evaluate_vllm(model, r1_zero_reward_fn, prompts, answers, sampling_params, logger, log=False)
     return acc
 
 def main():
+    g = torch.Generator()
+    g.manual_seed(torch.seed())
     args, args_text = _parse_args()
     setup_default_logging()
     handler = RotatingFileHandler(args.log_name+'.log', maxBytes=10*1024*1024, backupCount=5)
@@ -120,32 +122,41 @@ def main():
     handler.setFormatter(formatter)
     _logger.addHandler(handler)
     swanlab.init(project=args.wandb_name, config=args, name=args.log_name)
-    train_dataset = SFTDataset(args.train_dir)
+    train_dataset = SFTDataset(is_jsonl=True, jsonl_file=args.train_dir)
     # valid_dataset = SFTDataset(args.valid_dir)
-    verify_model = init_vllm(args.model_id, device="cuda:0", seed=args.seed, gpu_memory_utilization=0.4)
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
-    train_model = AutoModelForCausalLM.from_pretrained(args.model_id).to("cuda:2")
+    # special_tokens = {"additional_special_tokens": ["<think>", "</think>", "<answer>", "</answer>"]}
+    # tokenizer.add_special_tokens(special_tokens)
+    # print(tokenizer.tokenize("<think>, </think>, <answer>, </answer>"))
+    # exit(0)
+    verify_model = init_vllm(args.model_id, device="cuda:1", seed=args.seed, gpu_memory_utilization=0.4)
+    train_model = AutoModelForCausalLM.from_pretrained(args.model_id).to("cuda:0")
+    # train_model.resize_token_embeddings(len(tokenizer))
     # get optimizer and scheduler
-    optimizer, scheduler = get_optimizer_scheduler(train_model, len(train_dataset)//(args.batch_size*args.gradient_accumulation_steps))
+    num_training_steps = args.num_samples // args.gradient_accumulation_steps
+
+    optimizer, scheduler = get_optimizer_scheduler(train_model, num_training_steps)
     # load_policy_into_vllm_instance(train_model, verify_model)
     # batch load dataset
     batch_size = args.batch_size
     # after each 1/4, evaluate the model
-    eval_interval = args.num_samples//(batch_size*args.gradient_accumulation_steps)//4
+    eval_interval = args.num_samples//4
     _logger.info(f"eval_interval: {eval_interval}")
     best_loss = 1e9
     best_acc = 0
+    load_policy_into_vllm_instance(train_model, verify_model)
+    acc = evaluate(args,_logger,verify_model)
+    _logger.info(f"Initial eval_acc: {acc}")
     t = time.time()
     for idx, batch in enumerate(get_loader(train_dataset, batch_size)):
         if idx >= args.num_samples:
             break
         prompt, response = batch
-        # import pdb; pdb.set_trace()
         tokenized_batch = tokenize_prompt_and_output(prompt, response, tokenizer)
         input_ids = tokenized_batch["input_ids"].to(train_model.device)
         labels = tokenized_batch["labels"].to(train_model.device)
         response_mask = tokenized_batch["response_mask"].to(train_model.device)
-        print("len:",len(input_ids[0]))
+        
         ret = get_response_log_probs(train_model,input_ids,labels,return_token_entropy=True)
         log_probs, token_entropy = ret["log_probs"], ret["token_entropy"]
         loss, _ = sft_microbatch_train_step(log_probs, response_mask, args.gradient_accumulation_steps)
@@ -160,15 +171,21 @@ def main():
                 # if idx % 10 == 0:
                 #     run_save_checkpoint(train_model, optimizer, idx, args.out_path + "/"+ args.log_name + "_best_model.pt")
         if (idx + 1) % eval_interval == 0:
-            eval_interval += args.num_samples//(batch_size*args.gradient_accumulation_steps)//4
-            print("begin eval")
+            eval_interval += args.num_samples//4
+            # print("begin eval")
             load_policy_into_vllm_instance(train_model, verify_model)
             acc = evaluate(args,_logger,verify_model)
             swanlab.log({"eval_acc":acc, "time":time.time() - t})
             _logger.info(f"Step {idx} eval_acc: {acc}")
             if acc > best_acc:
                 best_acc = acc
-                run_save_checkpoint(train_model, optimizer, idx, args.out_path + "/"+ args.log_name + "_best_model.pt")
+                train_model.save_pretrained(args.out_path + "/"+ args.log_name)
+                tokenizer.save_pretrained(args.out_path + "/"+ args.log_name)
+    train_model = AutoModelForCausalLM.from_pretrained(args.out_path + "/"+ args.log_name).to("cuda:2")
+    load_policy_into_vllm_instance(train_model, verify_model)
+    args.valid_dir = "data/math_hf/test.jsonl"
+    acc = evaluate(args,_logger,verify_model)
+    _logger.info(f"Final eval_acc: {acc}")
     _logger.info(f"Best loss: {best_loss}")
     _logger.info(f"Best acc: {best_acc}")
     _logger.info(f"Training time: {(time.time()-t)/60} min")
