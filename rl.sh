@@ -1,0 +1,1 @@
+uv run cs336_alignment/rl.py --config config/rl.yml

@@ -1,4 +1,4 @@
-model_id: "/opt/pretrained_models/Qwen/Qwen2.5-Math-1.5B"
+model_id: "/home/v-tianshixu/pretrained_models/Qwen2.5-Math-1.5B"
 
 train_dir: "data/math_hf/sft_correct.jsonl"
 valid_dir: "data/math_hf/valid.jsonl"

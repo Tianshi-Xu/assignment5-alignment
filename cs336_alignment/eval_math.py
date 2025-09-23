@@ -38,7 +38,8 @@ def evaluate_vllm(
     logger,
     log: bool = False
 ) -> None:
-    outputs = vllm_model.generate(prompts, eval_sampling_params)
+    with torch.no_grad():
+        outputs = vllm_model.generate(prompts, eval_sampling_params)
     score = 0
     llm_response = {"right_format_right_answer": [], "wrong_format_wrong_answer": [], "wrong_format_right_answer": [], "right_format_wrong_answer": []}
     for i, output in enumerate(outputs):

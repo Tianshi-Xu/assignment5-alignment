@@ -5,7 +5,7 @@ from transformers import get_cosine_schedule_with_warmup
 from torch.optim import AdamW
 from unittest.mock import patch
 import torch
-from datasets import load_dataset, Features, Value
+from dataset import SFTDataset
 from torch.utils.data import DataLoader
 from typing import Callable, List, Dict
 import json
@@ -15,7 +15,7 @@ from logging.handlers import RotatingFileHandler
 from timm.utils import setup_default_logging
 import swanlab
 from cs336_alignment.module_sft import *
-from eval_math import load_math_dataset, format_prompt, evaluate_vllm, r1_zero_reward_fn
+from utils import evaluate
 import time
 
 config_parser = parser = argparse.ArgumentParser(description='Training Config', add_help=False)
@@ -99,19 +99,6 @@ def get_optimizer_scheduler(model: PreTrainedModel,num_training_steps):
     )
     return optimizer, scheduler
 
-def evaluate(args,logger,model:LLM) -> float:
-    prompt_file = "cs336_alignment/prompts/r1_zero.prompt"
-    jsonl_file = args.valid_dir
-    examples = load_math_dataset(jsonl_file)
-    prompts = [format_prompt(prompt_file, example['problem']) for example in examples]
-    # prompts = [format_prompt(prompt_file,"What is the smallest multiple of 6 greater than 115?")]
-    answers = [example['solution'] for example in examples]
-    sampling_params = SamplingParams(
-        temperature=1.0, top_p=1.0, max_tokens=4096, stop=["</answer>"], include_stop_str_in_output=True
-    )
-    acc = evaluate_vllm(model, r1_zero_reward_fn, prompts, answers, sampling_params, logger, log=False)
-    return acc
-
 def main():
     g = torch.Generator()
     g.manual_seed(torch.seed())
@@ -129,7 +116,7 @@ def main():
     # tokenizer.add_special_tokens(special_tokens)
     # print(tokenizer.tokenize("<think>, </think>, <answer>, </answer>"))
     # exit(0)
-    verify_model = init_vllm(args.model_id, device="cuda:1", seed=args.seed, gpu_memory_utilization=0.4)
+    verify_model = init_vllm(args.model_id, device="cuda:0", seed=args.seed, gpu_memory_utilization=0.3)
     train_model = AutoModelForCausalLM.from_pretrained(args.model_id).to("cuda:0")
     # train_model.resize_token_embeddings(len(tokenizer))
     # get optimizer and scheduler
@@ -181,7 +168,7 @@ def main():
                 best_acc = acc
                 train_model.save_pretrained(args.out_path + "/"+ args.log_name)
                 tokenizer.save_pretrained(args.out_path + "/"+ args.log_name)
-    train_model = AutoModelForCausalLM.from_pretrained(args.out_path + "/"+ args.log_name).to("cuda:2")
+    train_model = AutoModelForCausalLM.from_pretrained(args.out_path + "/"+ args.log_name).to("cuda:0")
     load_policy_into_vllm_instance(train_model, verify_model)
     args.valid_dir = "data/math_hf/test.jsonl"
     acc = evaluate(args,_logger,verify_model)

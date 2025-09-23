@@ -1,0 +1,99 @@
+2025-09-23 08:59:11,896 - train - INFO - rollout batch 0 generated, length: 256
+2025-09-23 09:01:00,984 - train - INFO - rl_loss: -0.0027044436428695917, time: 109.08716797828674, l2_norm: 0.14105106890201569, token_entropy: 0.8196184635162354, reward_data: {'total_num': 256, 'total_reward': 144.0, 'total_format_reward': 241.0, 'total_answer_reward': 144.0}
+2025-09-23 09:02:06,089 - train - INFO - prompt: A conversation between User and Assistant. The User asks a question, and the Assistant solves it. The Assistant first thinks about the reasoning process in the mind and then provides the User with the answer. The reasoning process is enclosed within <think> </think> and answer is enclosed within <answer> </answer> tags, respectively, i.e., <think> reasoning process here </think> <answer> answer here </answer>.
+User: If $\det \mathbf{A} = -7$ and $\det \mathbf{B} = 3,$ then find $\det (\mathbf{B} \mathbf{A}).$
+Assistant: <think>
+2025-09-23 09:02:06,089 - train - INFO - model output: 
+The determinant of the product of two matrices is equal to the product of their determinants: \(\det(\mathbf{B} \mathbf{A}) = \det(\mathbf{B}) \det(\mathbf{A})\).
+
+Given:
+\[
+\det(\mathbf{A}) = -7
+\]
+\[
+\det(\mathbf{B}) = 3
+\]
+
+Substitute the given values:
+\[
+\det(\mathbf{B} \mathbf{A}) = 3 \times (-7)
+\]
+
+Calculate the product:
+\[
+3 \times (-7) = -21
+\]
+
+Thus, the determinant of \(\mathbf{B} \mathbf{A}\) is \(-21\).
+</think>
+
+<answer> \(-21\) </answer>
+2025-09-23 09:02:06,089 - train - INFO - reward: {'format_reward': 1.0, 'answer_reward': 0.0, 'reward': 0.0}
+2025-09-23 09:02:07,510 - train - INFO - right_format_right_answer:495
+2025-09-23 09:02:07,510 - train - INFO - wrong_format_right_answer:0
+2025-09-23 09:02:07,510 - train - INFO - right_format_wrong_answer:492
+2025-09-23 09:02:07,510 - train - INFO - wrong_format_wrong_answer:37
+2025-09-23 09:02:07,510 - train - INFO - rollout batch 0 done, eval_acc: 0.4833984375
+2025-09-23 09:03:06,912 - train - INFO - new best eval_acc: 0.4833984375, save model to checkpoints/rl/rl
+2025-09-23 09:03:21,522 - train - INFO - rollout batch 1 generated, length: 256
+2025-09-23 09:05:16,843 - train - INFO - rl_loss: 0.0, time: 115.32045888900757, l2_norm: 0.1688903421163559, token_entropy: 0.5658361315727234, reward_data: {'total_num': 256, 'total_reward': 111.0, 'total_format_reward': 231.0, 'total_answer_reward': 111.0}
+2025-09-23 09:05:31,501 - train - INFO - rollout batch 2 generated, length: 256
+2025-09-23 09:07:23,932 - train - INFO - rl_loss: 0.0, time: 112.43115735054016, l2_norm: 0.1126938983798027, token_entropy: 0.7272617816925049, reward_data: {'total_num': 256, 'total_reward': 137.0, 'total_format_reward': 231.0, 'total_answer_reward': 137.0}
+2025-09-23 09:07:38,156 - train - INFO - rollout batch 3 generated, length: 256
+2025-09-23 09:09:32,745 - train - INFO - rl_loss: 0.0, time: 114.58875274658203, l2_norm: 0.16608834266662598, token_entropy: 0.791907548904419, reward_data: {'total_num': 256, 'total_reward': 136.0, 'total_format_reward': 235.0, 'total_answer_reward': 136.0}
+2025-09-23 09:09:47,856 - train - INFO - rollout batch 4 generated, length: 256
+2025-09-23 09:11:42,166 - train - INFO - rl_loss: 0.0007081041112542152, time: 114.31017112731934, l2_norm: 0.1393544226884842, token_entropy: 0.6694165468215942, reward_data: {'total_num': 256, 'total_reward': 155.0, 'total_format_reward': 238.0, 'total_answer_reward': 155.0}
+2025-09-23 09:11:55,989 - train - INFO - rollout batch 5 generated, length: 256
+2025-09-23 09:13:49,085 - train - INFO - rl_loss: -0.0011754008010029793, time: 113.09603357315063, l2_norm: 0.12875869870185852, token_entropy: 0.5069801807403564, reward_data: {'total_num': 256, 'total_reward': 154.0, 'total_format_reward': 234.0, 'total_answer_reward': 154.0}
+2025-09-23 09:14:05,455 - train - INFO - rollout batch 6 generated, length: 256
+2025-09-23 09:16:13,190 - train - INFO - rl_loss: 0.00029494499904103577, time: 127.73469591140747, l2_norm: 0.11207535862922668, token_entropy: 0.3914829194545746, reward_data: {'total_num': 256, 'total_reward': 133.0, 'total_format_reward': 211.0, 'total_answer_reward': 133.0}
+2025-09-23 09:16:28,784 - train - INFO - rollout batch 7 generated, length: 256
+2025-09-23 09:18:30,288 - train - INFO - rl_loss: 0.0, time: 121.50313186645508, l2_norm: 0.12982049584388733, token_entropy: 0.48879605531692505, reward_data: {'total_num': 256, 'total_reward': 161.0, 'total_format_reward': 239.0, 'total_answer_reward': 161.0}
+2025-09-23 09:18:45,813 - train - INFO - rollout batch 8 generated, length: 256
+2025-09-23 09:20:55,909 - train - INFO - rl_loss: -0.0007317916606552899, time: 130.09612369537354, l2_norm: 0.10983358323574066, token_entropy: 0.4927634596824646, reward_data: {'total_num': 256, 'total_reward': 151.0, 'total_format_reward': 225.0, 'total_answer_reward': 151.0}
+2025-09-23 09:21:13,207 - train - INFO - rollout batch 9 generated, length: 256
+2025-09-23 09:23:27,478 - train - INFO - rl_loss: 0.0, time: 134.27083444595337, l2_norm: 0.09639222174882889, token_entropy: 0.3826166093349457, reward_data: {'total_num': 256, 'total_reward': 123.0, 'total_format_reward': 220.0, 'total_answer_reward': 123.0}
+2025-09-23 09:23:42,340 - train - INFO - rollout batch 10 generated, length: 256
+2025-09-23 09:25:43,820 - train - INFO - rl_loss: 0.00018715710029937327, time: 121.47955250740051, l2_norm: 0.10559416562318802, token_entropy: 0.6263481974601746, reward_data: {'total_num': 256, 'total_reward': 158.0, 'total_format_reward': 229.0, 'total_answer_reward': 158.0}
+2025-09-23 09:27:18,738 - train - INFO - prompt: A conversation between User and Assistant. The User asks a question, and the Assistant solves it. The Assistant first thinks about the reasoning process in the mind and then provides the User with the answer. The reasoning process is enclosed within <think> </think> and answer is enclosed within <answer> </answer> tags, respectively, i.e., <think> reasoning process here </think> <answer> answer here </answer>.
+User: If $\det \mathbf{A} = -7$ and $\det \mathbf{B} = 3,$ then find $\det (\mathbf{B} \mathbf{A}).$
+Assistant: <think>
+2025-09-23 09:27:18,738 - train - INFO - model output: 
+The determinant of the product of two matrices \(\mathbf{A}\) and \(\mathbf{B}\) is equal to the product of their determinants. This property holds for square matrices of any size, as long as the matrices are square. Specifically, for square matrices \(\mathbf{A}\) and \(\mathbf{B}\),
+
+\[
+\det(\mathbf{B} \mathbf{A}) = \det(\mathbf{B}) \cdot \det(\mathbf{A}).
+\]
+
+Given that \(\det(\mathbf{A}) = -7\) and \(\det(\mathbf{B}) = 3\), we can substitute these values into the equation:
+
+\[
+\det(\mathbf{B} \mathbf{A}) = 3 \times (-7) = -21.
+\]
+
+Thus, the determinant of \(\mathbf{B} \mathbf{A}\) is \(-21\).
+</think>
+
+<answer> -21 </answer>
+2025-09-23 09:27:18,738 - train - INFO - reward: {'format_reward': 1.0, 'answer_reward': 0.0, 'reward': 0.0}
+2025-09-23 09:27:19,948 - train - INFO - right_format_right_answer:615
+2025-09-23 09:27:19,948 - train - INFO - wrong_format_right_answer:0
+2025-09-23 09:27:19,948 - train - INFO - right_format_wrong_answer:354
+2025-09-23 09:27:19,948 - train - INFO - wrong_format_wrong_answer:55
+2025-09-23 09:27:19,948 - train - INFO - rollout batch 10 done, eval_acc: 0.6005859375
+2025-09-23 09:28:27,705 - train - INFO - new best eval_acc: 0.6005859375, save model to checkpoints/rl/rl
+2025-09-23 09:28:43,857 - train - INFO - rollout batch 11 generated, length: 256
+2025-09-23 09:30:52,957 - train - INFO - rl_loss: -0.0009753681370057166, time: 129.10002994537354, l2_norm: 0.0733175203204155, token_entropy: 0.4070391058921814, reward_data: {'total_num': 256, 'total_reward': 154.0, 'total_format_reward': 214.0, 'total_answer_reward': 154.0}
+2025-09-23 09:31:10,657 - train - INFO - rollout batch 12 generated, length: 256
+2025-09-23 09:33:20,886 - train - INFO - rl_loss: 0.0, time: 130.22871947288513, l2_norm: 0.08089307695627213, token_entropy: 0.2869199514389038, reward_data: {'total_num': 256, 'total_reward': 142.0, 'total_format_reward': 209.0, 'total_answer_reward': 142.0}
+2025-09-23 09:33:37,132 - train - INFO - rollout batch 13 generated, length: 256
+2025-09-23 09:35:50,476 - train - INFO - rl_loss: 0.0, time: 133.34340000152588, l2_norm: 0.09134475141763687, token_entropy: 0.3000028729438782, reward_data: {'total_num': 256, 'total_reward': 161.0, 'total_format_reward': 214.0, 'total_answer_reward': 161.0}
+2025-09-23 09:36:06,432 - train - INFO - rollout batch 14 generated, length: 256
+2025-09-23 09:38:03,702 - train - INFO - rl_loss: 0.00018817416275851429, time: 117.26994943618774, l2_norm: 0.08836106956005096, token_entropy: 0.5757733583450317, reward_data: {'total_num': 256, 'total_reward': 185.0, 'total_format_reward': 231.0, 'total_answer_reward': 185.0}
+2025-09-23 09:38:20,150 - train - INFO - rollout batch 15 generated, length: 256
+2025-09-23 09:40:32,540 - train - INFO - rl_loss: 0.00023626905749551952, time: 132.38998866081238, l2_norm: 0.06901803612709045, token_entropy: 0.47846564650535583, reward_data: {'total_num': 256, 'total_reward': 167.0, 'total_format_reward': 208.0, 'total_answer_reward': 167.0}
+2025-09-23 09:40:46,343 - train - INFO - rollout batch 16 generated, length: 256
+2025-09-23 09:42:37,916 - train - INFO - rl_loss: 0.0, time: 111.57291603088379, l2_norm: 0.07408279925584793, token_entropy: 0.36030304431915283, reward_data: {'total_num': 256, 'total_reward': 196.0, 'total_format_reward': 240.0, 'total_answer_reward': 196.0}
+2025-09-23 09:42:54,746 - train - INFO - rollout batch 17 generated, length: 256
+2025-09-23 09:44:58,069 - train - INFO - rl_loss: 6.999049219302833e-05, time: 123.32359385490417, l2_norm: 0.07642059773206711, token_entropy: 0.40020522475242615, reward_data: {'total_num': 256, 'total_reward': 182.0, 'total_format_reward': 213.0, 'total_answer_reward': 182.0}
+2025-09-23 09:45:12,640 - train - INFO - rollout batch 18 generated, length: 256

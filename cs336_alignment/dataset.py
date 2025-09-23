@@ -3,6 +3,8 @@ from typing import List, Dict
 import matplotlib.pyplot as plt
 import re
 from drgrpo_grader import r1_zero_reward_fn
+from torch.utils.data import Dataset
+
 def create_dataset(jsonl_file: str) -> List[Dict]:
     """加载 MATH 数据集"""
     sta_len = []
@@ -89,6 +91,86 @@ def process_data(jsonl_file: str, correct=False) -> List[Dict]:
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
     
     return new_dataset
+
+class SFTDataset(Dataset):
+    def __init__(self, is_jsonl: bool, jsonl_file: str = None, prompt: list[str] = None, response: list[str] = None):
+        self.prompt = []
+        self.response = []
+        self.max_length = 4096
+        
+        if is_jsonl:
+            # Initialize from JSONL file
+            if jsonl_file is None:
+                raise ValueError("jsonl_file must be provided when is_jsonl=True")
+            with open(jsonl_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        json_line = json.loads(line)
+                        self.prompt.append(json_line["prompt"])
+                        self.response.append(json_line["response"])
+        else:
+            # Initialize from lists
+            if prompt is None or response is None:
+                raise ValueError("Both prompt and response must be provided when is_jsonl=False")
+            if len(prompt) != len(response):
+                raise ValueError("prompt and response lists must have the same length")
+            self.prompt = prompt
+            self.response = response
+    
+    @classmethod           
+    def from_dataset(cls, dataset: list[dict]):
+        prompt = [item["prompt"] for item in dataset]
+        response = [item["response"] for item in dataset]
+        return cls(is_jsonl=False, jsonl_file= None, prompt=prompt, response=response)
+
+    def __len__(self):
+        return len(self.prompt)
+
+    def __getitem__(self, idx) -> tuple[str, str]:
+        return self.prompt[idx], self.response[idx]
+
+class RLDataset(Dataset):
+
+    def __init__(self, rollout_prompt: list[str] = None, rollout_response: list[str] = None, rollout_advantage: list[float] = None):
+        self.rollout_prompt = []
+        self.rollout_response = []
+        self.rollout_advantage = []
+        self.max_length = 4096
+        self.rollout_prompt = rollout_prompt
+        self.rollout_response = rollout_response
+        self.rollout_advantage = rollout_advantage
+    
+    @classmethod           
+    def from_dataset(cls, dataset: list[dict]):
+        rollout_prompt = [item["rollout_prompt"] for item in dataset]
+        rollout_response = [item["rollout_response"] for item in dataset]
+        rollout_advantage = [item["rollout_advantage"] for item in dataset]
+        return cls(rollout_prompt=rollout_prompt, rollout_response=rollout_response, rollout_advantage=rollout_advantage)
+
+    def __len__(self):
+        return len(self.rollout_prompt)
+
+    def __getitem__(self, idx) -> tuple[str, str]:
+        return self.rollout_prompt[idx], self.rollout_response[idx], self.rollout_advantage[idx]
+
+
+class QuestionDataset(Dataset):
+    def __init__(self, jsonl_file: str):
+        self.problem = []
+        self.answer = []
+        self.max_length = 4096
+        with open(jsonl_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    json_line = json.loads(line)
+                    self.problem.append(json_line["problem"])
+                    self.answer.append(json_line["solution"])
+
+    def __len__(self):
+        return len(self.problem)
+
+    def __getitem__(self, idx) -> tuple[str, str]:
+        return self.problem[idx], self.answer[idx]
 
 if __name__ == "__main__":
     process_data("data/math_hf/train_math_responses.jsonl", correct=True)

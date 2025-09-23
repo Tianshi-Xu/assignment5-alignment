@@ -3,8 +3,9 @@ import torch
 from typing import Literal
 import argparse
 from module_rl import *
+from module_rl import compute_group_normalized_rewards
 from utils import *
-from dataset import QuestionDataset
+from dataset import QuestionDataset, r1_zero_reward_fn, RLDataset
 import yaml
 from timm.utils import setup_default_logging
 from logging.handlers import RotatingFileHandler
@@ -13,6 +14,9 @@ import swanlab
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from torch.optim import AdamW
 from transformers import get_cosine_schedule_with_warmup
+from vllm import LLM, SamplingParams
+from module_sft import get_response_log_probs,tokenize_prompt_and_output
+import time
 
 
 config_parser = parser = argparse.ArgumentParser(description='Training Config', add_help=False)
@@ -86,7 +90,7 @@ def main():
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     _logger.addHandler(handler)
-    swanlab.init(project=args.wandb_name, config=args, name=args.log_name)
+    # swanlab.init(project=args.wandb_name, config=args, name=args.log_name)
     assert args.train_batch_size % args.gradient_accumulation_steps == 0, (
     "train_batch_size must be divisible by gradient_accumulation_steps"
     )
@@ -101,21 +105,61 @@ def main():
     n_microbatches_per_rollout_batch = args.rollout_batch_size // micro_train_batch_size
     train_dataset = QuestionDataset(args.train_dir)
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
-    verify_model = init_vllm(args.model_id, device="cuda:3", seed=args.seed, gpu_memory_utilization=0.6)
+    verify_model = init_vllm(args.model_id, device="cuda:0", seed=args.seed, gpu_memory_utilization=args.gpu_memory_utilization)
     train_model = AutoModelForCausalLM.from_pretrained(args.model_id).to("cuda:0")
 
-    optimizer, _ = get_optimizer_scheduler(train_model, 100)
+    optimizer, scheduler = get_optimizer_scheduler(train_model, args.n_grpo_steps*args.rollout_batch_size/args.train_batch_size)
     batch_size = args.train_batch_size
-    
-    for idx, batch in enumerate(get_loader(train_dataset, batch_size)):
-        if idx >= args.n_grpo_steps:
+    best_acc = 0
+    for step, batch in enumerate(get_loader(train_dataset, n_prompts_per_rollout_batch)):
+        if step >= args.n_grpo_steps:
             break
         # load_policy_into_vllm_instance(train_model, verify_model)
         with open("cs336_alignment/prompts/r1_zero.prompt", 'r', encoding='utf-8') as f:
             template = f.read().strip()
         prompts, answers = batch
         prompts = [template.format(question=example) for example in prompts]
+        sampling_params = SamplingParams(
+            temperature=1.0, top_p=1.0,min_tokens=args.sampling_min_tokens, max_tokens=args.sampling_max_tokens, stop=["</answer>"], include_stop_str_in_output=True, n=args.group_size
+        )
+        outputs = verify_model.generate(prompts, sampling_params)
+        rollout_responses = [output.outputs[i].text for output in outputs for i in range(args.group_size)]
+        rollout_prompts = [output.prompt for output in outputs for _ in range(args.group_size)]
+        repeated_ground_truths = [answer for answer in answers for _ in range(args.group_size)]
         
-    
+        assert repeated_ground_truths[0] == repeated_ground_truths[args.group_size-1]
+        advantages, raw_rewards, reward_data = compute_group_normalized_rewards(r1_zero_reward_fn, rollout_responses, repeated_ground_truths, args.group_size, args.advantage_eps, use_std_normalization)
+        rollout_dataset = RLDataset(rollout_prompt=rollout_prompts, rollout_response=rollout_responses, rollout_advantage=advantages)
+        _logger.info(f"rollout batch {step} generated, length: {len(rollout_dataset)}")
+        t = time.time()
+        for i in range(args.epochs_per_rollout_batch):
+            for idx, train_batch in enumerate(get_loader(rollout_dataset, micro_train_batch_size)):
+                rollout_prompt, rollout_response, rollout_advantage = train_batch
+                tokenized_batch = tokenize_prompt_and_output(rollout_prompt, rollout_response, tokenizer)
+                input_ids = tokenized_batch["input_ids"].to(train_model.device)
+                labels = tokenized_batch["labels"].to(train_model.device)
+                response_mask = tokenized_batch["response_mask"].to(train_model.device)
+                rollout_advantage = rollout_advantage.to(train_model.device)
+                ret = get_response_log_probs(train_model,input_ids,labels,return_token_entropy=True)
+                log_probs, token_entropy = ret["log_probs"], ret["token_entropy"]
+                # print(log_probs.shape, response_mask.shape, rollout_advantage.shape)
+                loss, metadata = grpo_microbatch_train_step(log_probs, response_mask, args.gradient_accumulation_steps,loss_type=loss_type,advantages=rollout_advantage)
+                if (idx + 1) % args.gradient_accumulation_steps == 0:
+                    l2_norm = grad_clipping(train_model.parameters(), 1.0)
+                    optimizer.step()
+                    scheduler.step()
+                    optimizer.zero_grad()
+                    _logger.info(f"rl_loss: {loss.item()}, time: {time.time() - t}, l2_norm: {l2_norm}, token_entropy: {token_entropy.mean().item()}, reward_data: {reward_data}")
+        load_policy_into_vllm_instance(train_model, verify_model)
+        if step % 10 == 0:
+            with torch.no_grad():
+                acc = evaluate(args,_logger,verify_model)
+            _logger.info(f"rollout batch {step} done, eval_acc: {acc}")
+            if acc > best_acc:
+                best_acc = acc
+                train_model.save_pretrained(args.out_path + "/"+ args.log_name)
+                tokenizer.save_pretrained(args.out_path + "/"+ args.log_name)
+                _logger.info(f"new best eval_acc: {acc}, save model to {args.out_path + '/'+ args.log_name}")
+        del advantages, raw_rewards, reward_data, rollout_dataset, outputs, rollout_prompts, rollout_responses, repeated_ground_truths, rollout_prompt, rollout_response, rollout_advantage, tokenized_batch, input_ids, labels, response_mask, ret, log_probs, token_entropy, loss, metadata
 if __name__ == "__main__":
     main()
