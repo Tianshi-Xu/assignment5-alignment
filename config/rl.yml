@@ -16,6 +16,6 @@ gradient_accumulation_steps: 256
 gpu_memory_utilization: 0.3
 seed: 3407
 
-log_name: "rl"
-out_path: "checkpoints/rl"
+log_name: "rl_early_stop"
+out_path: "checkpoints/rl_early_stop"
 wandb_name: "cs336_assignment5_rl"

@@ -39,13 +39,15 @@ def grad_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float):
     return l2_norm
 
 @torch.no_grad()
-def evaluate(args,logger,model:LLM) -> float:
+def evaluate(args,logger,model:LLM, sample_num: int = 1024) -> float:
     prompt_file = "cs336_alignment/prompts/r1_zero.prompt"
     jsonl_file = args.valid_dir
     examples = load_math_dataset(jsonl_file)
-    prompts = [format_prompt(prompt_file, example['problem']) for example in examples[:1024]]
+    if sample_num is None:
+        sample_num = len(examples)
+    prompts = [format_prompt(prompt_file, example['problem']) for example in examples[:sample_num]]
     # prompts = [format_prompt(prompt_file,"What is the smallest multiple of 6 greater than 115?")]
-    answers = [example['solution'] for example in examples[:1024]]
+    answers = [example['solution'] for example in examples[:sample_num]]
     sampling_params = SamplingParams(
         temperature=1.0, top_p=1.0, max_tokens=4096, stop=["</answer>"], include_stop_str_in_output=True
     )

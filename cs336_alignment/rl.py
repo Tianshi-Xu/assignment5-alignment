@@ -90,7 +90,7 @@ def main():
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     _logger.addHandler(handler)
-    # swanlab.init(project=args.wandb_name, config=args, name=args.log_name)
+    swanlab.init(project=args.wandb_name, config=args, name=args.log_name)
     assert args.train_batch_size % args.gradient_accumulation_steps == 0, (
     "train_batch_size must be divisible by gradient_accumulation_steps"
     )
@@ -111,6 +111,7 @@ def main():
     optimizer, scheduler = get_optimizer_scheduler(train_model, args.n_grpo_steps*args.rollout_batch_size/args.train_batch_size)
     batch_size = args.train_batch_size
     best_acc = 0
+    t = time.time()
     for step, batch in enumerate(get_loader(train_dataset, n_prompts_per_rollout_batch)):
         if step >= args.n_grpo_steps:
             break
@@ -153,13 +154,20 @@ def main():
         load_policy_into_vllm_instance(train_model, verify_model)
         if step % 10 == 0:
             with torch.no_grad():
-                acc = evaluate(args,_logger,verify_model)
-            _logger.info(f"rollout batch {step} done, eval_acc: {acc}")
+                acc = evaluate(args,_logger,verify_model, sample_num=1024)
+            _logger.info(f"step batch {step} done, eval_acc: {acc}")
             if acc > best_acc:
                 best_acc = acc
                 train_model.save_pretrained(args.out_path + "/"+ args.log_name)
                 tokenizer.save_pretrained(args.out_path + "/"+ args.log_name)
-                _logger.info(f"new best eval_acc: {acc}, save model to {args.out_path + '/'+ args.log_name}")
+                _logger.info(f"in step {step} new best eval_acc: {acc}, save model to {args.out_path + '/'+ args.log_name}")
         del advantages, raw_rewards, reward_data, rollout_dataset, outputs, rollout_prompts, rollout_responses, repeated_ground_truths, rollout_prompt, rollout_response, rollout_advantage, tokenized_batch, input_ids, labels, response_mask, ret, log_probs, token_entropy, loss, metadata
+    train_model = AutoModelForCausalLM.from_pretrained(args.out_path + "/"+ args.log_name).to("cuda:0")
+    load_policy_into_vllm_instance(train_model, verify_model)
+    args.valid_dir = "data/math_hf/test.jsonl"
+    acc = evaluate(args,_logger,verify_model, sample_num=None)
+    _logger.info(f"Best eval_acc: {best_acc}")
+    _logger.info(f"training time: {time.time() - t}")
+    swanlab.finish()
 if __name__ == "__main__":
     main()
