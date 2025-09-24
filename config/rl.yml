@@ -13,9 +13,9 @@ sampling_min_tokens: 4
 sampling_max_tokens: 1024
 epochs_per_rollout_batch: 1
 gradient_accumulation_steps: 256
-gpu_memory_utilization: 0.3
+gpu_memory_utilization: 0.25
 seed: 3407
 
-log_name: "rl_early_stop"
-out_path: "checkpoints/rl_early_stop"
+log_name: "rl_baseline"
+out_path: "checkpoints/rl_baseline"
 wandb_name: "cs336_assignment5_rl"
