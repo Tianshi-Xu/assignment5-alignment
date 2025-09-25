@@ -131,7 +131,7 @@ class SFTDataset(Dataset):
 
 class RLDataset(Dataset):
 
-    def __init__(self, rollout_prompt: list[str] = None, rollout_response: list[str] = None, rollout_advantage: list[float] = None):
+    def __init__(self, rollout_prompt: list[str] = None, rollout_response: list[str] = None, rollout_advantage: list[float] = None, old_log_probs: list[float] = None):
         self.rollout_prompt = []
         self.rollout_response = []
         self.rollout_advantage = []
@@ -139,19 +139,21 @@ class RLDataset(Dataset):
         self.rollout_prompt = rollout_prompt
         self.rollout_response = rollout_response
         self.rollout_advantage = rollout_advantage
-    
+        self.old_log_probs = old_log_probs
+        
     @classmethod           
     def from_dataset(cls, dataset: list[dict]):
         rollout_prompt = [item["rollout_prompt"] for item in dataset]
         rollout_response = [item["rollout_response"] for item in dataset]
         rollout_advantage = [item["rollout_advantage"] for item in dataset]
-        return cls(rollout_prompt=rollout_prompt, rollout_response=rollout_response, rollout_advantage=rollout_advantage)
+        old_log_probs = [item["old_log_probs"] for item in dataset]
+        return cls(rollout_prompt=rollout_prompt, rollout_response=rollout_response, rollout_advantage=rollout_advantage, old_log_probs=old_log_probs)
 
     def __len__(self):
         return len(self.rollout_prompt)
 
     def __getitem__(self, idx) -> tuple[str, str]:
-        return self.rollout_prompt[idx], self.rollout_response[idx], self.rollout_advantage[idx]
+        return self.rollout_prompt[idx], self.rollout_response[idx], self.rollout_advantage[idx], self.old_log_probs[idx]
 
 
 class QuestionDataset(Dataset):

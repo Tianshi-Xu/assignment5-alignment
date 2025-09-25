@@ -69,7 +69,36 @@ def get_response_log_probs(
         return {"log_probs":log_probs, "token_entropy":token_entropy}
     else:
         return {"log_probs":log_probs}
-    
+
+# get old log probs for RL without gradient
+def get_old_log_probs(
+    model: torch.nn.Module,
+    input_ids: torch.Tensor,
+    labels: torch.Tensor,
+) -> torch.Tensor:
+    """Get the conditional log-probs of the response given the prompt,
+
+    Args:
+        model: PreTrainedModel, the model to score.
+        input_ids: torch.Tensor of shape (batch_size, sequence_length):
+            the tokenized prompt and output.
+        labels: torch.Tensor of shape (batch_size, sequence_length):
+            shifted input_ids.
+
+    Returns:
+        dict[str, torch.Tensor]:
+            "log_probs": torch.Tensor of shape (batch_size, sequence_length):
+                the conditional log-probs of the response given the prompt.
+                Note that we have not masked out the token indices corresponding
+                to the prompt or padding; that is done in the train loop.
+    """
+    with torch.inference_mode():
+        logits = model(input_ids).logits
+        logits = logits - torch.max(logits, dim=-1, keepdim=True).values
+        log_probs = logits - torch.logsumexp(logits, dim=-1, keepdim=True)
+        log_probs = log_probs.gather(dim=-1, index=rearrange(labels, 'b s -> b s 1')).squeeze(-1)
+        return {"log_probs":log_probs}
+
 def masked_normalize(
     tensor: torch.Tensor,
     mask: torch.Tensor,

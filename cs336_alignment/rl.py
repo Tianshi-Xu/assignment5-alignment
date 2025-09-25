@@ -15,7 +15,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from torch.optim import AdamW
 from transformers import get_cosine_schedule_with_warmup
 from vllm import LLM, SamplingParams
-from module_sft import get_response_log_probs,tokenize_prompt_and_output
+from module_sft import get_response_log_probs,tokenize_prompt_and_output, get_old_log_probs
 import time
 
 
@@ -50,7 +50,7 @@ loss_type: Literal[
     "no_baseline",
     "reinforce_with_baseline",
     "grpo_clip",
-] = "reinforce_with_baseline"
+] = "grpo_clip"
 use_std_normalization: bool = True
 
 _logger = logging.getLogger('train')
@@ -130,21 +130,30 @@ def main():
         
         assert repeated_ground_truths[0] == repeated_ground_truths[args.group_size-1]
         advantages, raw_rewards, reward_data = compute_group_normalized_rewards(r1_zero_reward_fn, rollout_responses, repeated_ground_truths, args.group_size, args.advantage_eps, use_std_normalization)
-        rollout_dataset = RLDataset(rollout_prompt=rollout_prompts, rollout_response=rollout_responses, rollout_advantage=advantages)
+        ### get old_prob
+        tokenized_batch = tokenize_prompt_and_output(rollout_prompts, rollout_responses, tokenizer)
+        input_ids = tokenized_batch["input_ids"].to(train_model.device)
+        labels = tokenized_batch["labels"].to(train_model.device)
+        response_mask = tokenized_batch["response_mask"].to(train_model.device)
+        ret = get_old_log_probs(train_model,input_ids,labels)
+        old_log_probs = ret["log_probs"]
+        ### build rollout_dataset
+        rollout_dataset = RLDataset(rollout_prompt=rollout_prompts, rollout_response=rollout_responses, rollout_advantage=advantages, old_log_probs=old_log_probs)
         _logger.info(f"rollout batch {step} generated, length: {len(rollout_dataset)}")
         t = time.time()
         for i in range(args.epochs_per_rollout_batch):
             for idx, train_batch in enumerate(get_loader(rollout_dataset, micro_train_batch_size)):
-                rollout_prompt, rollout_response, rollout_advantage = train_batch
+                rollout_prompt, rollout_response, rollout_advantage, old_log_probs = train_batch
                 tokenized_batch = tokenize_prompt_and_output(rollout_prompt, rollout_response, tokenizer)
                 input_ids = tokenized_batch["input_ids"].to(train_model.device)
                 labels = tokenized_batch["labels"].to(train_model.device)
                 response_mask = tokenized_batch["response_mask"].to(train_model.device)
                 rollout_advantage = rollout_advantage.to(train_model.device)
+                old_log_probs = old_log_probs.to(train_model.device)
                 ret = get_response_log_probs(train_model,input_ids,labels,return_token_entropy=True)
                 log_probs, token_entropy = ret["log_probs"], ret["token_entropy"]
                 # print(log_probs.shape, response_mask.shape, rollout_advantage.shape)
-                loss, metadata = grpo_microbatch_train_step(log_probs, response_mask, args.gradient_accumulation_steps,loss_type=loss_type,advantages=rollout_advantage)
+                loss, metadata = grpo_microbatch_train_step(log_probs, response_mask, args.gradient_accumulation_steps,loss_type=loss_type,advantages=rollout_advantage,old_log_probs=old_log_probs)
                 if (idx + 1) % args.gradient_accumulation_steps == 0:
                     l2_norm = grad_clipping(train_model.parameters(), 1.0)
                     optimizer.step()
@@ -161,7 +170,7 @@ def main():
                 train_model.save_pretrained(args.out_path + "/"+ args.log_name)
                 tokenizer.save_pretrained(args.out_path + "/"+ args.log_name)
                 _logger.info(f"in step {step} new best eval_acc: {acc}, save model to {args.out_path + '/'+ args.log_name}")
-        del advantages, raw_rewards, reward_data, rollout_dataset, outputs, rollout_prompts, rollout_responses, repeated_ground_truths, rollout_prompt, rollout_response, rollout_advantage, tokenized_batch, input_ids, labels, response_mask, ret, log_probs, token_entropy, loss, metadata
+        del advantages, raw_rewards, reward_data, rollout_dataset, outputs, rollout_prompts, rollout_responses, repeated_ground_truths, rollout_prompt, rollout_response, rollout_advantage, tokenized_batch, input_ids, labels, response_mask, ret, log_probs, token_entropy, loss, metadata, old_log_probs
     train_model = AutoModelForCausalLM.from_pretrained(args.out_path + "/"+ args.log_name).to("cuda:0")
     load_policy_into_vllm_instance(train_model, verify_model)
     args.valid_dir = "data/math_hf/test.jsonl"
