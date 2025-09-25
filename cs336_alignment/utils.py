@@ -49,7 +49,7 @@ def evaluate(args,logger,model:LLM, sample_num: int = 1024) -> float:
     # prompts = [format_prompt(prompt_file,"What is the smallest multiple of 6 greater than 115?")]
     answers = [example['solution'] for example in examples[:sample_num]]
     sampling_params = SamplingParams(
-        temperature=1.0, top_p=1.0, max_tokens=4096, stop=["</answer>"], include_stop_str_in_output=True
+        temperature=1.0, top_p=1.0, max_tokens=1024, stop=["</answer>"], include_stop_str_in_output=True
     )
     acc = evaluate_vllm(model, r1_zero_reward_fn, prompts, answers, sampling_params, logger, log=False)
     return acc
