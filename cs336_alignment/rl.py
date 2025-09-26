@@ -17,6 +17,7 @@ from transformers import get_cosine_schedule_with_warmup
 from vllm import LLM, SamplingParams
 from module_sft import get_response_log_probs,tokenize_prompt_and_output, get_old_log_probs
 import time
+import os
 
 
 config_parser = parser = argparse.ArgumentParser(description='Training Config', add_help=False)
@@ -91,7 +92,12 @@ def main():
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     _logger.addHandler(handler)
+    _logger.info(f"args: {args}")
+    swanlab.login(api_key="4PyQMcHFUaUPU0mJAiSi7", save=True)
     swanlab.init(project=args.wandb_name, config=args, name=args.log_name)
+    data_path = os.environ.get("AMLT_DATA_DIR")
+    args.model_id = os.path.join(data_path, args.model_id)
+
     assert args.train_batch_size % args.gradient_accumulation_steps == 0, (
     "train_batch_size must be divisible by gradient_accumulation_steps"
     )
@@ -176,8 +182,8 @@ def main():
             _logger.info(f"step batch {step} done, eval_acc: {acc}")
             if acc > best_acc:
                 best_acc = acc
-                train_model.save_pretrained(args.out_path + "/"+ args.log_name)
-                tokenizer.save_pretrained(args.out_path + "/"+ args.log_name)
+                # train_model.save_pretrained(args.out_path + "/"+ args.log_name)
+                # tokenizer.save_pretrained(args.out_path + "/"+ args.log_name)
                 _logger.info(f"in step {step} new best eval_acc: {acc}, save model to {args.out_path + '/'+ args.log_name}")
         del advantages, raw_rewards, reward_data, rollout_dataset, outputs, rollout_prompts, rollout_responses, repeated_ground_truths, rollout_prompt, rollout_response, rollout_advantage, tokenized_batch, input_ids, labels, response_mask, ret, log_probs, token_entropy, loss, metadata, old_log_probs_list
     train_model = AutoModelForCausalLM.from_pretrained(args.out_path + "/"+ args.log_name).to("cuda:0")

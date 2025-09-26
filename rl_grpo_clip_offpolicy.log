@@ -443,3 +443,4 @@ Therefore, the integer \(n\) that satisfies the equation is \(-139\).
 2025-09-26 06:47:04,596 - train - INFO - length of old_log_probs: 256
 2025-09-26 06:49:19,371 - train - INFO - rl_loss: -0.0021096114069223404, time: 134.77504801750183, l2_norm: 0.07988736033439636, token_entropy: 0.3913659155368805, reward_data: {'total_num': 256, 'total_reward': 163.0, 'total_format_reward': 212.0, 'total_answer_reward': 163.0}, metadata: {'clamped_at_min_count': tensor(0., device='cuda:0'), 'clamped_at_max_count': tensor(0., device='cuda:0')}
 2025-09-26 06:49:34,208 - train - INFO - rollout batch 14 generated, length: 256
+2025-09-26 06:50:14,734 - train - INFO - length of old_log_probs: 256
