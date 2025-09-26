@@ -45,10 +45,6 @@ def evaluate_vllm(
     for i, output in enumerate(outputs):
         prompt = output.prompt
         generated_text = output.outputs[0].text
-        if i==488:
-            logger.info(f"prompt: {prompt}")
-            logger.info(f"model output: {generated_text}")
-            logger.info(f"reward: {reward}")
         reward = reward_fn(generated_text, answers[i])
         score += reward['reward']
         ans = {"prompt": prompt, "generated_text": generated_text, "answer": answers[i], "reward":reward}
@@ -60,6 +56,10 @@ def evaluate_vllm(
             llm_response["right_format_wrong_answer"].append(ans)
         else:
             llm_response["wrong_format_wrong_answer"].append(ans)
+        if i==487:
+            logger.info(f"prompt: {prompt}")
+            logger.info(f"model output: {generated_text}")
+            logger.info(f"reward: {reward}")
     if log:
         print(f"total problems: {len(outputs)}, score: {score}")
         torch.save(llm_response, "llm_response_base.pt")

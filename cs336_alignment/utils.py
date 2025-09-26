@@ -21,8 +21,8 @@ def load_policy_into_vllm_instance(policy: PreTrainedModel, llm: LLM):
     llm_model = llm.llm_engine.model_executor.driver_worker.model_runner.model
     llm_model.load_weights(state_dict.items())
     
-def get_loader(dataset: List[Dict], batch_size: int):
-    return DataLoader(dataset, batch_size=batch_size, shuffle=True)
+def get_loader(dataset: List[Dict], batch_size: int, shuffle: bool = True):
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
 def grad_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float):
     l2_norm = 0

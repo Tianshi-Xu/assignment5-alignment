@@ -131,24 +131,22 @@ class SFTDataset(Dataset):
 
 class RLDataset(Dataset):
 
-    def __init__(self, rollout_prompt: list[str] = None, rollout_response: list[str] = None, rollout_advantage: list[float] = None, raw_rewards: list[float] = None, old_log_probs: list[float] = None):
+    def __init__(self, rollout_prompt: list[str] = None, rollout_response: list[str] = None, rollout_advantage: list[float] = None, raw_rewards: list[float] = None):
         self.rollout_prompt = []
         self.rollout_response = []
         self.rollout_advantage = []
         self.raw_rewards = []
-        self.old_log_probs = []
         self.max_length = 4096
         self.rollout_prompt = rollout_prompt
         self.rollout_response = rollout_response
         self.rollout_advantage = rollout_advantage
-        self.old_log_probs = old_log_probs
         self.raw_rewards = raw_rewards
 
     def __len__(self):
         return len(self.rollout_prompt)
 
     def __getitem__(self, idx) -> tuple[str, str]:
-        return self.rollout_prompt[idx], self.rollout_response[idx], self.rollout_advantage[idx], self.old_log_probs[idx], self.raw_rewards[idx]
+        return self.rollout_prompt[idx], self.rollout_response[idx], self.rollout_advantage[idx], self.raw_rewards[idx]
 
 
 class QuestionDataset(Dataset):

@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 import json
 import os
 from typing import BinaryIO, IO
-
+from tqdm import tqdm
 def tokenize_prompt_and_output(prompt_strs: list[str], output_strs: list[str], tokenizer: PreTrainedTokenizer) -> dict[str, torch.Tensor]:
     prompt_ids = tokenizer(prompt_strs).input_ids
     output_ids = tokenizer(output_strs).input_ids
@@ -75,29 +75,24 @@ def get_old_log_probs(
     model: torch.nn.Module,
     input_ids: torch.Tensor,
     labels: torch.Tensor,
+    batch_size: int = 1,
 ) -> torch.Tensor:
-    """Get the conditional log-probs of the response given the prompt,
-
-    Args:
-        model: PreTrainedModel, the model to score.
-        input_ids: torch.Tensor of shape (batch_size, sequence_length):
-            the tokenized prompt and output.
-        labels: torch.Tensor of shape (batch_size, sequence_length):
-            shifted input_ids.
-
-    Returns:
-        dict[str, torch.Tensor]:
-            "log_probs": torch.Tensor of shape (batch_size, sequence_length):
-                the conditional log-probs of the response given the prompt.
-                Note that we have not masked out the token indices corresponding
-                to the prompt or padding; that is done in the train loop.
-    """
     with torch.inference_mode():
-        logits = model(input_ids).logits
-        logits = logits - torch.max(logits, dim=-1, keepdim=True).values
-        log_probs = logits - torch.logsumexp(logits, dim=-1, keepdim=True)
-        log_probs = log_probs.gather(dim=-1, index=rearrange(labels, 'b s -> b s 1')).squeeze(-1)
-        return {"log_probs":log_probs}
+        num_batches = input_ids.shape[0] // batch_size
+        log_probs_list = []
+        #  use tqdm to show the progress
+        for i in range(num_batches):
+            input_ids_batch = input_ids[i*batch_size:(i+1)*batch_size]
+            labels_batch = labels[i*batch_size:(i+1)*batch_size]
+            logits = model(input_ids_batch).logits
+            logits = logits - torch.max(logits, dim=-1, keepdim=True).values
+            log_probs = logits - torch.logsumexp(logits, dim=-1, keepdim=True)
+            log_probs = log_probs.gather(dim=-1, index=rearrange(labels_batch, 'b s -> b s 1')).squeeze(-1)
+            # print("log_probs shape:", log_probs.shape)
+            log_probs_list.append(log_probs)
+        output = torch.cat(log_probs_list, dim=0)
+        # print("log_probs_old shape: ", log_probs.shape)
+        return {"log_probs":output.detach()}
 
 def masked_normalize(
     tensor: torch.Tensor,

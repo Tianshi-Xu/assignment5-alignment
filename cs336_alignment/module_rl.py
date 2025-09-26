@@ -47,11 +47,12 @@ def compute_grpo_clip_loss(
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     ratio = torch.exp(policy_log_probs - old_log_probs)
     ratio_clipped  = torch.clamp(ratio, 1-cliprange, 1+cliprange)
-    clamped_at_min = torch.where(ratio < 1-cliprange)
-    clamped_at_max = torch.where(ratio > 1+cliprange)
+    clamped_at_min_count = torch.sum(ratio < 1-cliprange)
+    clamped_at_max_count = torch.sum(ratio > 1+cliprange)
+    # count the number of clamped at min and max
     meta_data = {
-        "clamped_at_min": clamped_at_min,
-        "clamped_at_max": clamped_at_max,
+        "clamped_at_min_count": clamped_at_min_count/torch.numel(ratio),
+        "clamped_at_max_count": clamped_at_max_count/torch.numel(ratio),
     }
     grpo_loss = -torch.minimum(ratio*advantages, ratio_clipped*advantages)
     return grpo_loss, meta_data
