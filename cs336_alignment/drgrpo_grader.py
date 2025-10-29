@@ -1049,6 +1049,47 @@ def r1_zero_reward_fn(response, ground_truth, fast=True):
             "reward": 0.0
         }
 
+# verify if the response is correct
+def smart_reward_fn(response, ground_truth, fast=True):
+    # We are strict about format to evaluate our models.
+    # if "<answer>" in response and "</answer>" in response:
+    if "\\boxed" in response:
+        model_answer = extract_answer(response)
+        if model_answer is None:
+            return {
+                "format_reward": 1.0,
+                "answer_reward": 0.0,
+                "reward": 0.0
+            }
+        if isinstance(ground_truth, float) or isinstance(ground_truth, int):
+            ground_truth = str(ground_truth)
+        if isinstance(ground_truth, str):
+            is_correct = grade(model_answer, ground_truth, fast)
+        elif isinstance(ground_truth, list):
+            is_correct = False
+            for gt in ground_truth:
+                is_correct |= grade(model_answer, gt, fast)
+        if is_correct:
+            return {
+                "format_reward": 1.0,
+                "answer_reward": 1.0,
+                "reward": 1.0
+            }
+        else:
+            # print("not correct, ground_truth:", ground_truth, "model_answer:", model_answer)
+            # Formatted but wrong answer; no format reward to avoid hacking.
+            return {
+                "format_reward": 1.0,
+                "answer_reward": 0.0,
+                "reward": 0.0
+            }
+    else:
+        # Unformatted.
+        return {
+            "format_reward": 0.0,
+            "answer_reward": 0.0,
+            "reward": 0.0
+        }
 
 def question_only_reward_fn(response, ground_truth, fast=True):
     model_answer = extract_answer(response)

@@ -5,7 +5,7 @@ import torch
 from vllm import LLM, SamplingParams
 from torch.utils.data import DataLoader
 from typing import List, Dict, Iterable
-from eval_math import load_math_dataset, format_prompt, evaluate_vllm, r1_zero_reward_fn
+from eval_math import load_math_dataset, load_math500_dataset, format_prompt, evaluate_vllm, r1_zero_reward_fn
 
 
 def init_vllm(model_id: str, device: str, seed: int, gpu_memory_utilization: float = 0.85):
@@ -39,17 +39,20 @@ def grad_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float):
     return l2_norm
 
 @torch.no_grad()
-def evaluate(args,logger,model:LLM, sample_num: int = 1024) -> float:
-    prompt_file = "cs336_alignment/prompts/r1_zero.prompt"
+def evaluate(args,logger,model:LLM, sample_num: int = 1024, reward_fn = r1_zero_reward_fn, dataset_type: str = "jsonl") -> float:
+    prompt_file = "cs336_alignment/prompts/smart_pmt.prompt"
     jsonl_file = args.valid_dir
-    examples = load_math_dataset(jsonl_file)
+    if dataset_type == "jsonl":
+        examples = load_math_dataset(jsonl_file)
+    elif dataset_type == "json":
+        examples = load_math500_dataset(jsonl_file)
     if sample_num is None:
         sample_num = len(examples)
-    prompts = [format_prompt(prompt_file, example['problem']) for example in examples[:sample_num]]
+    prompts = [format_prompt(prompt_file, example['prompt']) for example in examples[:sample_num]]
     # prompts = [format_prompt(prompt_file,"What is the smallest multiple of 6 greater than 115?")]
-    answers = [example['solution'] for example in examples[:sample_num]]
+    answers = [example['answer'] for example in examples[:sample_num]]
     sampling_params = SamplingParams(
-        temperature=1.0, top_p=1.0, max_tokens=1024, stop=["</answer>"], include_stop_str_in_output=True
+        temperature=0.1, top_p=1.0, max_tokens=1024, stop=["</answer>"], include_stop_str_in_output=True
     )
-    acc = evaluate_vllm(model, r1_zero_reward_fn, prompts, answers, sampling_params, logger, log=False)
+    acc = evaluate_vllm(model, reward_fn, prompts, answers, sampling_params, logger, log=False)
     return acc

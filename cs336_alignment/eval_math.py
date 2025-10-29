@@ -17,7 +17,6 @@ def format_prompt(prompt_file: str, problem: str) -> str:
     """使用模板格式化问题"""
     with open(prompt_file, 'r', encoding='utf-8') as f:
         template = f.read().strip()
-
     return template.format(question=problem)
 
 def load_math_dataset(jsonl_file: str) -> List[Dict]:
@@ -28,6 +27,11 @@ def load_math_dataset(jsonl_file: str) -> List[Dict]:
             if line.strip():
                 examples.append(json.loads(line))
     return examples
+
+def load_math500_dataset(json_file: str) -> List[Dict]:
+    """加载 MATH 数据集"""
+    with open(json_file, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 def evaluate_vllm(
     vllm_model: LLM,

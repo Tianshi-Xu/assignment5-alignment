@@ -1,0 +1,9 @@
+# model_id: "/home/v-tianshixu/pretrained_model/Qwen2.5-Math-1.5B"
+model_id: "/home/v-tianshixu/pretrained_model/Qwen2.5-Math-7B"
+train_dir: "data/math_hf/sft_correct.jsonl"
+valid_dir: "data/math_hf/MATH500.json"
+batch_size: 1
+gradient_accumulation_steps: 8
+num_samples: 1024
+
+log_name: "base_model"
